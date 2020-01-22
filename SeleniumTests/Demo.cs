@@ -1,12 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Security.Authentication.ExtendedProtection;
-using System.Text;
+﻿using System.Collections.Generic;
 using System.Threading;
-using System.Threading.Tasks;
 using NUnit.Framework;
-using NUnit.Framework.Constraints;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using SeleniumTests.Models;

@@ -52,7 +52,7 @@ namespace SeleniumTests
         private TimeSpan ConvertStringToTimeSpan(string time)
         {
             int hours = int.Parse(time.Remove(2));
-            string minutsAndSeconds = time.Remove(0, 2);
+            string minutesAndSeconds = time.Remove(0, 2);
             int days = 0;
 
             if (hours >= 24)
@@ -61,7 +61,7 @@ namespace SeleniumTests
                 hours = hours % 24;
             }
 
-            return TimeSpan.Parse($"{days}:{hours}{minutsAndSeconds}");
+            return TimeSpan.Parse($"{days}:{hours}{minutesAndSeconds}");
         }
 
         /// <summary>
