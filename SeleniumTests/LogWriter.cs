@@ -7,10 +7,12 @@ namespace SeleniumTests
     class LogWriter
     {
         private string m_exePath = string.Empty;
+
         public LogWriter(string logMessage)
         {
             LogWrite(logMessage);
         }
+
         public void LogWrite(string logMessage)
         {
             m_exePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
