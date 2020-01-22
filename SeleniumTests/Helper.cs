@@ -20,6 +20,12 @@ namespace SeleniumTests
 
         private LogWriter log  = new LogWriter("Helper Start");
 
+        /// <summary>
+        ///  Get For page information about Name of Plant and Left Time to Growup
+        /// Plant name return only if its sown, else return empty string
+        /// Left Time 
+        /// </summary>
+        /// <param name="plant"></param>
         private void ReadLeftTimeForPlantAndPlantName(Grid plant)
         {
             plant.PlantName = string.Empty;
@@ -36,6 +42,13 @@ namespace SeleniumTests
                 }
             }
         }
+
+        /// <summary>
+        /// Convert string to TimeSpan
+        /// Count hours to days if possible
+        /// </summary>
+        /// <param name="time"></param>
+        /// <returns></returns>
         private TimeSpan ConvertStringToTimeSpan(string time)
         {
             int hours = int.Parse(time.Remove(2));
@@ -51,6 +64,12 @@ namespace SeleniumTests
             return TimeSpan.Parse($"{days}:{hours}{minutsAndSeconds}");
         }
 
+        /// <summary>
+        /// Span can return left time to gather or string 'Ready'
+        /// Method check it and fill right field 
+        /// </summary>
+        /// <param name="plant"></param>
+        /// <param name="ReadOffTime"></param>
         private void SetupGridReadyToGatherOrTimeToLeft(Grid plant, string ReadOffTime)
         {
             if (ReadOffTime == BaseKey.Ready)
@@ -63,25 +82,37 @@ namespace SeleniumTests
             }
         }
 
+        /// <summary>
+        /// Check then a field contain a plant
+        /// Setup variable Ready To Sowing If field is empty
+        /// </summary>
+        /// <param name="element"></param>
+        /// <returns></returns>
         private bool SetupReadyToSowing(IWebElement element)
         {
             if (element.FindElements(By.TagName("div"))[0].GetAttribute("class").Contains("plantImage") &&
                 element.FindElements(By.TagName("div"))[0].GetAttribute("style").Contains("0.gif"))
             {
               return  true;
-               
             }
-            else
-            {
-                return false;
-            }
+
+            return false;
         }
 
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        /// <param name="driver"></param>
         public Helper(IWebDriver driver)
         {
             this.driver = driver;
         }
 
+        /// <summary>
+        /// Red all information about field and plant
+        /// Save data in to List of Grid model 
+        /// </summary>
+        /// <returns></returns>
         public  List<Grid> GetGridElements()
         {
             List<Grid> result = new List<Grid>();
@@ -132,6 +163,10 @@ namespace SeleniumTests
             return result;
         }
 
+        /// <summary>
+        /// Check if plant are watering 
+        /// </summary>
+        /// <param name="plants"></param>
         public void UpdateWateringActive(List<Grid> plants)
         {
             foreach (var plant in plants)
@@ -141,22 +176,31 @@ namespace SeleniumTests
             }
         }
 
+        /// <summary>
+        /// Check if field are ready to Sowing 
+        /// </summary>
+        /// <param name="plants"></param>
         public void UpdateSowingActive(List<Grid> plants)
         {
             foreach (var plant in plants)
             {
-                if (plant.Cell != null && (plant.Cell.FindElements(By.TagName("div"))[0].GetAttribute("class").Contains("plantImage") &&
-                                           plant.Cell.FindElements(By.TagName("div"))[0].GetAttribute("style").Contains("0.gif")))
-                {
-                    plant.ReadyToDrop = true;
-                }
-                else
-                {
-                    plant.ReadyToDrop = false;
-                }
+                plant.ReadyToDrop = SetupReadyToSowing(plant.Cell);
+                //if (plant.Cell != null && (plant.Cell.FindElements(By.TagName("div"))[0].GetAttribute("class").Contains("plantImage") &&
+                //                           plant.Cell.FindElements(By.TagName("div"))[0].GetAttribute("style").Contains("0.gif")))
+                //{
+                //    plant.ReadyToDrop = true;
+                //}
+                //else
+                //{
+                //    plant.ReadyToDrop = false;
+                //}
             }
         }
 
+        /// <summary>
+        /// Update left time to Gather
+        /// </summary>
+        /// <param name="plant"></param>
         public void GetLeftTime(List<Grid> plant)
         {
             string time = String.Empty;
@@ -171,19 +215,13 @@ namespace SeleniumTests
                 
                 Wait(300);
                 ReadLeftTimeForPlantAndPlantName(cell);
-
-                //ClickAtElement(cell.Cell);
-                //if (driver.FindElement(By.XPath("//*[@id='sprcontent']")).Displayed)
-                //{
-                //    ReadOnlyCollection<IWebElement> options = driver.FindElements(By.XPath("//*[@id='sprcontent']/div/span"));
-                //    cell.Frut = options[0].Text;
-
-                //    SetupGridReadyToGatherOrTimeToLeft(cell, options[3].Text.Replace(BaseKey.ReadyInTime, ""));
-                //}
             }
         }
 
-
+        /// <summary>
+        /// Get Tolls and save it to List of ToolsMenu model
+        /// </summary>
+        /// <returns></returns>
         public List<ToolsMenu> GetToolElements()
         {
             List<ToolsMenu> result = new List<ToolsMenu>();
@@ -204,6 +242,12 @@ namespace SeleniumTests
             return result;
         }
 
+        /// <summary>
+        /// Gets Seed from Regal
+        /// Regal are change to next if its possible
+        /// Seed are save to List of Seed model
+        /// </summary>
+        /// <returns></returns>
         public List<Seed> GetSeedRegal()
         {
             List<Seed> results = new List<Seed>();
@@ -239,6 +283,10 @@ namespace SeleniumTests
             return results;
         }
 
+        /// <summary>
+        /// Simulate click at element
+        /// </summary>
+        /// <param name="element"></param>
         public void ClickAtElement(IWebElement element)
         {
             Actions actions = new Actions(driver);
@@ -255,30 +303,47 @@ namespace SeleniumTests
                 Console.WriteLine(e);
                 throw;
             }
-
         }
 
+        /// <summary>
+        /// Overloading method ClickAtElement
+        /// </summary>
+        /// <param name="elements"></param>
         public void ClickAtElement(List<IWebElement> elements)
         {
             Actions actions = new Actions(driver);
             foreach (var element in elements)
             {
-                if (element.Displayed)
+                try
                 {
-                    actions.MoveToElement(element).Click().Perform();
+                    if (element.Displayed)
+                    {
+                        actions.MoveToElement(element).Click().Perform();
+                    }
                 }
-                else
+                catch (Exception e)
                 {
-                    //  throw new Exception("Element do not displayed");
+                    Console.WriteLine(e);
+                    throw;
                 }
             }
         }
 
+        /// <summary>
+        /// Wait method
+        /// </summary>
+        /// <param name="miliseconds"></param>
         public void Wait(int miliseconds)
         {
             new WebDriverWait(driver, TimeSpan.FromMilliseconds(miliseconds));
         }
 
+        /// <summary>
+        /// Method to Gather up plants
+        /// Update List of Grid model
+        /// </summary>
+        /// <param name="plants"></param>
+        /// <param name="tools"></param>
         public void GatherUpPlant(List<Grid> plants, List<ToolsMenu> tools)
         {
             ClickAtElement(tools.Find(x => x.Name == BaseKey.GatherTool).Toll);
@@ -296,6 +361,14 @@ namespace SeleniumTests
             }
         }
 
+        /// <summary>
+        /// Method to Drop Seeds at field
+        /// Update List of Grid model
+        /// </summary>
+        /// <param name="seeds"></param>
+        /// <param name="plants"></param>
+        /// <param name="tools"></param>
+        /// <param name="dropSeedName"></param>
         public void DropSeed(List<Seed> seeds, List<Grid> plants, List<ToolsMenu> tools, string dropSeedName)
         {
             GoToPage(seeds.Find(x => x.Name == dropSeedName).RegalNumber);
@@ -308,7 +381,6 @@ namespace SeleniumTests
             /// Drop seed at empty plans
             foreach (var plant in plants.Where(x => x.ReadyToDrop == true))
             {
-
                 if (plant.ReadyToDrop)
                 {
                     ClickAtElement(plant.Cell);
@@ -319,6 +391,13 @@ namespace SeleniumTests
             }
         }
 
+        /// <summary>
+        ///  Method to Watering plants
+        ///  Update List of Grid model
+        /// </summary>
+        /// <param name="seeds"></param>
+        /// <param name="plants"></param>
+        /// <param name="tools"></param>
         public void Wathering(List<Seed> seeds, List<Grid> plants, List<ToolsMenu> tools)
         {
             /// Select tool for watering 
@@ -332,6 +411,9 @@ namespace SeleniumTests
             }
         }
 
+        /// <summary>
+        /// Method reset Regal of seed to default view 
+        /// </summary>
         public void RestestRegal()
         {
             IWebElement arrowLeft = driver.FindElement(By.XPath("//*[@id='lager_arrow_left']"));
@@ -342,6 +424,10 @@ namespace SeleniumTests
             }
         }
 
+        /// <summary>
+        /// Method go to indicated Regal of seeds
+        /// </summary>
+        /// <param name="pageNumber"></param>
         public void GoToPage(int pageNumber)
         {
             RestestRegal();
@@ -352,6 +438,10 @@ namespace SeleniumTests
             }
         }
 
+
+        /// <summary>
+        /// Closing welcome pop ups 
+        /// </summary>
         public void closeNewsFrames()
         {
             if (driver.FindElement(By.XPath("//*[@id='newszwergLayer']")).GetAttribute("style")
