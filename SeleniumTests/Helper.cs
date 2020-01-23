@@ -90,10 +90,21 @@ namespace SeleniumTests
         /// <returns></returns>
         private bool SetupReadyToSowing(IWebElement element)
         {
-            if (element.FindElements(By.TagName("div"))[0].GetAttribute("class").Contains("plantImage") &&
-                element.FindElements(By.TagName("div"))[0].GetAttribute("style").Contains("0.gif"))
+            try
             {
-              return  true;
+                if (element.FindElements(By.TagName("div"))[0].Displayed)
+                {
+                    if (element.FindElements(By.TagName("div"))[0].GetAttribute("class").Contains("plantImage") &&
+                        element.FindElements(By.TagName("div"))[0].GetAttribute("style").Contains("0.gif"))
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch (StaleElementReferenceException e)
+            {
+                Console.WriteLine(e);
+                throw;
             }
 
             return false;
@@ -116,7 +127,6 @@ namespace SeleniumTests
         public  List<Grid> GetGridElements()
         {
             List<Grid> result = new List<Grid>();
-            Grid plant = new Grid();
             IWebElement element;
             IWebElement watter;
             bool readyToSowing = false;
@@ -134,24 +144,27 @@ namespace SeleniumTests
                 {
                    element = driver.FindElement(By.Id($"gardenTile{elementCount}"));
                    watter = driver.FindElement(By.Id($"gardenTile{elementCount}")).FindElement(By.ClassName("wasser"));
-                   Wait(10);
+                   Wait(20);
 
                    readyToSowing = SetupReadyToSowing(element);
 
                    if (element.Displayed)
                    {
-                       plant.Cell = element;
-                       plant.Raw = int.Parse(element.GetAttribute("class").Split()[1].Replace("row", ""));
-                       plant.Col = int.Parse(element.GetAttribute("class").Split()[2].Replace("col", ""));
-                       plant.Id = $"gardenTile{elementCount}";
-                       plant.Water = watter.GetAttribute("src").Contains("gegossen.gif");
-                       plant.ReadyToDrop = readyToSowing;
-                       ReadLeftTimeForPlantAndPlantName(plant);
+                       result.Add(new Grid()
+                       {
+                           Cell = element,
+                           Raw = int.Parse(element.GetAttribute("class").Split()[1].Replace("row", "")),
+                           Col = int.Parse(element.GetAttribute("class").Split()[2].Replace("col", "")),
+                           Id = $"gardenTile{elementCount}",
+                           Water = watter.GetAttribute("src").Contains("gegossen.gif"),
+                           ReadyToDrop = readyToSowing
 
-                       log.LogWrite(plant.Log());
+                       });
+
+                       ReadLeftTimeForPlantAndPlantName(result.Last());
+
+                       log.LogWrite(result.Last().Log());
                    }
-
-                   result.Add(plant);
                 }
                 catch (Exception e)
                 {
@@ -169,11 +182,25 @@ namespace SeleniumTests
         /// <param name="plants"></param>
         public void UpdateWateringActive(List<Grid> plants)
         {
+            log.LogWrite("Start UpdateWateringActive");
             foreach (var plant in plants)
             {
                 Wait(30);
-               plant.Water = plant.Cell.FindElement(By.ClassName("wasser")).GetAttribute("src").Contains("gegossen.gif");
+                try
+                {
+                    if (driver.FindElement(By.Id($"{plant.Id}_water")).Displayed)
+                    {
+                        driver.FindElement(By.Id($"{plant.Id}_water")).GetAttribute("src")
+                            .Contains("gegossen.gif");
+                    }
+                }
+                catch (Exception e)
+                {
+                   log.LogWriteError($"Watering Error; plant log : {plant.Log()} ",e);
+                    continue;
+                }
             }
+            log.LogWrite("End UpdateWateringActive");
         }
 
         /// <summary>
@@ -182,19 +209,14 @@ namespace SeleniumTests
         /// <param name="plants"></param>
         public void UpdateSowingActive(List<Grid> plants)
         {
+            log.LogWrite("Start UpdateSowingActive");
             foreach (var plant in plants)
             {
+                Wait(25);
+                log.LogWrite(plant.Id);
                 plant.ReadyToDrop = SetupReadyToSowing(plant.Cell);
-                //if (plant.Cell != null && (plant.Cell.FindElements(By.TagName("div"))[0].GetAttribute("class").Contains("plantImage") &&
-                //                           plant.Cell.FindElements(By.TagName("div"))[0].GetAttribute("style").Contains("0.gif")))
-                //{
-                //    plant.ReadyToDrop = true;
-                //}
-                //else
-                //{
-                //    plant.ReadyToDrop = false;
-                //}
             }
+            log.LogWrite("End UpdateSowingActive");
         }
 
         /// <summary>
@@ -213,7 +235,7 @@ namespace SeleniumTests
 
                 ClickAtElement(cell.Cell);
                 
-                Wait(300);
+                Wait(20);
                 ReadLeftTimeForPlantAndPlantName(cell);
             }
         }
@@ -236,7 +258,8 @@ namespace SeleniumTests
                {
                    Name = element.GetAttribute("Id"),
                    Toll = element
-               }); 
+               });
+               log.LogWrite(result.Last().Log());
             }
 
             return result;
@@ -262,7 +285,6 @@ namespace SeleniumTests
             {
                 if (element.GetAttribute("style").Contains("display: none"))
                 {
-                    Wait(30);
                     ClickAtElement(driver.FindElement(By.XPath("//*[@id='lager_arrow_right']")));
                     pageNumber++;
                     Wait(30);
@@ -278,6 +300,7 @@ namespace SeleniumTests
                     RegalNumber = pageNumber
                 });
                 ClickAtElement(SeedDescription);
+                log.LogWrite(results.Last().Log());
             }
 
             return results;
@@ -300,6 +323,26 @@ namespace SeleniumTests
             }
             catch (Exception e)
             {
+                log.LogWriteError($"Click At Element: {element} ", e);
+                Console.WriteLine(e);
+                throw;
+            }
+        }
+
+        public void ClickAtElement(IWebElement element, string description)
+        {
+            Actions actions = new Actions(driver);
+
+            try
+            {
+                if (element.Displayed)
+                {
+                    actions.MoveToElement(element).Click().Perform();
+                }
+            }
+            catch (Exception e)
+            {
+                log.LogWriteError($"Click At Element: {element}, Description: {description} ", e);
                 Console.WriteLine(e);
                 throw;
             }
@@ -335,7 +378,12 @@ namespace SeleniumTests
         /// <param name="miliseconds"></param>
         public void Wait(int miliseconds)
         {
+            DateTime start = DateTime.Now;
+           
             new WebDriverWait(driver, TimeSpan.FromMilliseconds(miliseconds));
+            Thread.Sleep(miliseconds);
+            DateTime end = DateTime.Now;
+            //log.LogWrite($"Wait time {end - start } ");
         }
 
         /// <summary>
@@ -349,14 +397,17 @@ namespace SeleniumTests
             ClickAtElement(tools.Find(x => x.Name == BaseKey.GatherTool).Toll);
             //ClickAtElement(tools.Where(x => x.Name == BaseKey.GatherTool));
 
-            foreach (var plant in plants.Where(x => x.RedyToGather == true))
+            foreach (var plant in plants) //.Where(x => x.RedyToGather == true))
             {
                 if (plant.RedyToGather)
                 {
                     ClickAtElement(plant.Cell);
-                    Wait(120);
+                    Wait(20);
+                    log.LogWrite($"Gather Up Plant : {plant.Id}, {plant.PlantName}");
                     plant.RedyToGather = false;
                     plant.ReadyToDrop = true;
+                    plant.PlantName = string.Empty;
+                    log.LogWrite($"Gather Up Plant : {plant.Log()}");
                 }
             }
         }
@@ -371,24 +422,31 @@ namespace SeleniumTests
         /// <param name="dropSeedName"></param>
         public void DropSeed(List<Seed> seeds, List<Grid> plants, List<ToolsMenu> tools, string dropSeedName)
         {
+            log.LogWrite("Start DropSeeds");
             GoToPage(seeds.Find(x => x.Name == dropSeedName).RegalNumber);
             /// Select tool for sowing 
-            ClickAtElement(tools.Find(x => x.Name == BaseKey.SowingTool).Toll);
+            ClickAtElement(tools.Find(x => x.Name == BaseKey.SowingTool).Toll, "SowingTool");
             Wait(100);
             ///Select a seed to drop
-            ClickAtElement(seeds.Find(x => x.Name == dropSeedName).SeedRegal);
+            ClickAtElement(seeds.Find(x => x.Name == dropSeedName).SeedRegal, $"Select {dropSeedName}");
             Wait(100);
             /// Drop seed at empty plans
-            foreach (var plant in plants.Where(x => x.ReadyToDrop == true))
+            foreach (var plant in plants) //.Where(x => x.ReadyToDrop == true))
             {
                 if (plant.ReadyToDrop)
                 {
-                    ClickAtElement(plant.Cell);
-                    Wait(2000);
+                    ClickAtElement(plant.Cell, plant.Log());
+                    Wait(100);
+                    log.LogWrite($"Seeds plant : {plant.Id}, {plant.PlantName}");
                     plant.ReadyToDrop = false;
                     plant.RedyToGather = false;
+                    plant.PlantName = dropSeedName;
+                    plant.Water = false;
+                    plant.TimeLeft = TimeSpan.Zero;
+                    log.LogWrite($"Seeds plant : {plant.Log()} ");
                 }
             }
+            Wait(2000);
         }
 
         /// <summary>
@@ -398,23 +456,28 @@ namespace SeleniumTests
         /// <param name="seeds"></param>
         /// <param name="plants"></param>
         /// <param name="tools"></param>
-        public void Wathering(List<Seed> seeds, List<Grid> plants, List<ToolsMenu> tools)
+        public void Watering(List<Seed> seeds, List<Grid> plants, List<ToolsMenu> tools)
         {
+            log.LogWrite("Start Watering");
             /// Select tool for watering 
             ClickAtElement(tools.Find(x => x.Name == BaseKey.WateringTool).Toll);
             Wait(100);
-            foreach (var plant in plants.Where(x => x.ReadyToDrop == true))
+            foreach (var plant in plants)//.Where(x => x.ReadyToDrop == true))
             {
-                ClickAtElement(plant.Cell);
-                Wait(150);
-                plant.Water = true;
+                if (plant.Water == false)
+                {
+                    ClickAtElement(plant.Cell);
+                    Wait(150);
+                    plant.Water = true;
+                    log.LogWrite($"Watering {plant.Id}, {plant.Water}");
+                }
             }
         }
 
         /// <summary>
         /// Method reset Regal of seed to default view 
         /// </summary>
-        public void RestestRegal()
+        public void ResetsRegal()
         {
             IWebElement arrowLeft = driver.FindElement(By.XPath("//*[@id='lager_arrow_left']"));
             Wait(30);
@@ -430,7 +493,7 @@ namespace SeleniumTests
         /// <param name="pageNumber"></param>
         public void GoToPage(int pageNumber)
         {
-            RestestRegal();
+            ResetsRegal();
 
             for (int i = 1; i < pageNumber; i++)
             {

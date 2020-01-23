@@ -28,17 +28,49 @@ namespace SeleniumTests
             }
         }
 
-        public void Log(string logMessage, TextWriter txtWriter)
+        public void LogWriteError(string logMessage, Exception e)
         {
+            m_exePath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
             try
             {
-                txtWriter.WriteLine("{0} {1} :\t {2}", DateTime.Now.ToLongTimeString(),
-                    DateTime.Now.ToShortDateString(), logMessage);
-                //txtWriter.Write("  \t:{0}", );
+                using (StreamWriter w = File.AppendText(m_exePath + "\\" + "log.txt"))
+                {
+                    Error(logMessage, w, e);
+                }
             }
             catch (Exception ex)
             {
             }
+        }
+
+        public void Log(string logMessage, TextWriter txtWriter)
+        {
+            try
+            {
+                txtWriter.WriteLine("{0:dd-MM-yyyy HH:mm:ss.fff} :\t {1}", DateTime.Now, logMessage);
+                //txtWriter.Write("  \t:{0}", );
+            }
+            catch (Exception ex)
+            {
+                throw ex;
+            }
+        }
+
+        private void Error(string logMessage, TextWriter txtWriter, Exception exception )
+        {
+            try
+            {
+                txtWriter.WriteLine("------------------- ERROR ----------------------------");
+                Log(logMessage, txtWriter);
+                Log(exception.Message, txtWriter);
+                txtWriter.WriteLine("------------------------------------------------------");
+            }
+            catch (Exception e)
+            {
+                
+                throw e;
+            }
+
         }
     }
 }

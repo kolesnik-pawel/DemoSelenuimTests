@@ -47,17 +47,19 @@ namespace SeleniumTests
             List<Seed> Seeds = helper.GetSeedRegal();
 
             List<Grid> tmp = helper.GetGridElements();
-            helper.GetLeftTime(tmp);
+            //helper.GetLeftTime(tmp);
 
             helper.GatherUpPlant(tmp, toolsMenus);
-            //helper.UpdateWateringActive(tmp);
-            //helper.UpdateSowingActive(tmp);
+            helper.UpdateWateringActive(tmp);
+            helper.UpdateSowingActive(tmp);
 
             helper.DropSeed(Seeds,tmp,toolsMenus,"Marchew");
-            //helper.UpdateWateringActive(tmp);
-            //helper.UpdateSowingActive(tmp);
+            helper.UpdateWateringActive(tmp);
+            helper.UpdateSowingActive(tmp);
 
-            helper.Wathering(Seeds, tmp, toolsMenus);
+            helper.Wait(3000);
+           // helper.UpdateWateringActive(tmp);
+            helper.Watering(Seeds, tmp, toolsMenus);
             //helper.UpdateWateringActive(tmp);
             //helper.UpdateSowingActive(tmp);
 

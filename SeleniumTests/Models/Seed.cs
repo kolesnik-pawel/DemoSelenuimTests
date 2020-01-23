@@ -26,5 +26,12 @@ namespace SeleniumTests.Models
         /// Number of Regal
         /// </summary>
         public int RegalNumber;
+
+        public string Log()
+        {
+            string log =
+                $"Name : {Name}, Id: {Id}, Regal Number : {RegalNumber}";
+            return log;
+        }
     }
 }

@@ -17,5 +17,15 @@ namespace SeleniumTests.Models
         /// </summary>
         public string Name { get; set; }
 
-     }
+        /// <summary>
+        /// Log about Tools Menu
+        /// </summary>
+        /// <returns></returns>
+        public string Log()
+        {
+            string log =
+                $" Tool Name : {Name}";
+            return log;
+        }
+    }
 }

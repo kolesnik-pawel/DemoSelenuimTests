@@ -61,7 +61,7 @@ namespace SeleniumTests.Models
         {
             string log =
                 $"Cell Id : {Id} Raw : {Raw.ToString()}, Column : {Col.ToString()}, Frut : {(PlantName == null ? "No Frut at plant " : PlantName)}," +
-                $" Left Time To Growing : {TimeLeft}, Watering : {Water}, Ready To Gather : {ReadyToDrop}, Ready To Drop : {ReadyToDrop} ";
+                $" Left Time To Growing : {TimeLeft}, Watering : {Water}, Ready To Gather : {RedyToGather}, Ready To Drop : {ReadyToDrop} ";
             return log;
         }
 
