@@ -54,16 +54,31 @@ namespace SeleniumTests.Models
         public bool Water { get; set; }
 
         /// <summary>
+        /// Set true if plant are decoration 
+        /// </summary>
+        public bool Decoration { get; set; }
+
+        /// <summary>
         /// Method to logging 
         /// </summary>
         /// <returns></returns>
         public string Log()
         {
-            string log =
-                $"Cell Id : {Id} Raw : {Raw.ToString()}, Column : {Col.ToString()}, Frut : {(PlantName == null ? "No Frut at plant " : PlantName)}," +
+            string log;
+
+            if (Decoration)
+            {
+                log = $"Cell Id : {Id}, Raw : {Raw.ToString()}, Column : {Col.ToString()}, Decoration : {(PlantName == null ? "No Decoration" : PlantName)}," +
+                      $" Left Time to tear down : {TimeLeft}";
+            }
+            else
+            {
+                log =
+                $"Cell Id : {Id}, Raw : {Raw.ToString()}, Column : {Col.ToString()}, Frut : {(PlantName == null ? "No Frut at plant " : PlantName)}," +
                 $" Left Time To Growing : {TimeLeft}, Watering : {Water}, Ready To Gather : {RedyToGather}, Ready To Drop : {ReadyToDrop} ";
+            }
+            
             return log;
         }
-
     }
 }

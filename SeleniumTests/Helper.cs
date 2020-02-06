@@ -12,13 +12,13 @@ namespace SeleniumTests
 {
     class Helper
     {
-        public static string Login = "pablo0510";
+        //public static string Login = "pablo0510";
 
-        public static string Password = "kosmos";
+        //public static string Password = "kosmos";
 
         private  IWebDriver driver;
 
-        private LogWriter log  = new LogWriter("Helper Start");
+        private LogWriter log  = new LogWriter("__________________________________________________________________\n\r \t\t\t\t\t\t\t\t Helper Start");
 
         /// <summary>
         ///  Get For page information about Name of Plant and Left Time to Growup
@@ -26,7 +26,7 @@ namespace SeleniumTests
         /// Left Time 
         /// </summary>
         /// <param name="plant"></param>
-        private void ReadLeftTimeForPlantAndPlantName(Grid plant)
+        private void GatherUpReadyLeftTimeForPlantAndPlantName(Grid plant)
         {
             plant.PlantName = string.Empty;
             if (plant.ReadyToDrop == false)
@@ -38,8 +38,25 @@ namespace SeleniumTests
                         driver.FindElements(By.XPath("//*[@id='sprcontent']/div/span"));
                     plant.PlantName = options[0].Text;
 
-                    SetupGridReadyToGatherOrTimeToLeft(plant, options[3].Text.Replace(BaseKey.ReadyInTime, ""));
+                    if (options.Count < 4)
+                    {
+                        if (options[1].Text.Contains(BaseKey.Decorations))
+                        {
+                            plant.Decoration = true;
+                            SetupGridReadyToGatherOrTimeToLeft(plant, options[2].Text.Replace(BaseKey.DecorationReadyInTime, ""));
+                            plant.RedyToGather = false;
+                        }
+                    }
+                    else
+                    {
+                        plant.Decoration = false;
+                        SetupGridReadyToGatherOrTimeToLeft(plant, options[3].Text.Replace(BaseKey.ReadyInTime, ""));
+                    }
                 }
+            }
+            else
+            {
+                plant.RedyToGather = false;
             }
         }
 
@@ -75,9 +92,11 @@ namespace SeleniumTests
             if (ReadOffTime == BaseKey.Ready)
             {
                 plant.RedyToGather = true;
+                plant.TimeLeft = TimeSpan.Zero;
             }
             else
             {
+                plant.RedyToGather = false;
                 plant.TimeLeft = ConvertStringToTimeSpan(ReadOffTime);
             }
         }
@@ -90,6 +109,28 @@ namespace SeleniumTests
         /// <returns></returns>
         private bool SetupReadyToSowing(IWebElement element)
         {
+            try
+            {
+                if (element.FindElements(By.TagName("div"))[0].Displayed)
+                {
+                    if (element.FindElements(By.TagName("div"))[0].GetAttribute("class").Contains("plantImage") &&
+                        element.FindElements(By.TagName("div"))[0].GetAttribute("style").Contains("0.gif"))
+                    {
+                        return true;
+                    }
+                }
+            }
+            catch (StaleElementReferenceException e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
+
+            return false;
+        }
+        private bool SetupReadyToSowing(string elementId)
+        {
+            IWebElement element = driver.FindElement(By.Id(elementId));
             try
             {
                 if (element.FindElements(By.TagName("div"))[0].Displayed)
@@ -161,7 +202,7 @@ namespace SeleniumTests
 
                        });
 
-                       ReadLeftTimeForPlantAndPlantName(result.Last());
+                       GatherUpReadyLeftTimeForPlantAndPlantName(result.Last());
 
                        log.LogWrite(result.Last().Log());
                    }
@@ -214,9 +255,20 @@ namespace SeleniumTests
             {
                 Wait(25);
                 log.LogWrite(plant.Id);
-                plant.ReadyToDrop = SetupReadyToSowing(plant.Cell);
+                plant.ReadyToDrop = SetupReadyToSowing(plant.Id);
             }
             log.LogWrite("End UpdateSowingActive");
+        }
+
+        public void UpdateGatherUpActive(List<Grid> plants)
+        {
+            log.LogWrite("Start UpdateSowingActive");
+
+            foreach (var plant in plants)
+            {
+                Wait(25);
+                GatherUpReadyLeftTimeForPlantAndPlantName(plant);
+            }
         }
 
         /// <summary>
@@ -236,7 +288,7 @@ namespace SeleniumTests
                 ClickAtElement(cell.Cell);
                 
                 Wait(20);
-                ReadLeftTimeForPlantAndPlantName(cell);
+                GatherUpReadyLeftTimeForPlantAndPlantName(cell);
             }
         }
 
@@ -329,6 +381,12 @@ namespace SeleniumTests
             }
         }
 
+        /// <summary>
+        ///  Simulate click at element
+        ///  Log with description
+        /// </summary>
+        /// <param name="element"></param>
+        /// <param name="description"></param>
         public void ClickAtElement(IWebElement element, string description)
         {
             Actions actions = new Actions(driver);
@@ -378,12 +436,8 @@ namespace SeleniumTests
         /// <param name="miliseconds"></param>
         public void Wait(int miliseconds)
         {
-            DateTime start = DateTime.Now;
-           
             new WebDriverWait(driver, TimeSpan.FromMilliseconds(miliseconds));
             Thread.Sleep(miliseconds);
-            DateTime end = DateTime.Now;
-            //log.LogWrite($"Wait time {end - start } ");
         }
 
         /// <summary>
@@ -396,8 +450,12 @@ namespace SeleniumTests
         {
             ClickAtElement(tools.Find(x => x.Name == BaseKey.GatherTool).Toll);
             //ClickAtElement(tools.Where(x => x.Name == BaseKey.GatherTool));
+            if (plants.Select(x => x.TimeLeft < TimeSpan.FromSeconds(30)).ToList().Count > 0)
+            {
+                Wait(30);
+            }
 
-            foreach (var plant in plants) //.Where(x => x.RedyToGather == true))
+            foreach (var plant in plants.Where(x => x.RedyToGather == true))
             {
                 if (plant.RedyToGather)
                 {
@@ -435,7 +493,7 @@ namespace SeleniumTests
             {
                 if (plant.ReadyToDrop)
                 {
-                    ClickAtElement(plant.Cell, plant.Log());
+                    ClickAtElement(driver.FindElement(By.Id(plant.Id)), plant.Log());
                     Wait(100);
                     log.LogWrite($"Seeds plant : {plant.Id}, {plant.PlantName}");
                     plant.ReadyToDrop = false;
@@ -466,7 +524,7 @@ namespace SeleniumTests
             {
                 if (plant.Water == false)
                 {
-                    ClickAtElement(plant.Cell);
+                    ClickAtElement(driver.FindElement(By.Id(plant.Id)));
                     Wait(150);
                     plant.Water = true;
                     log.LogWrite($"Watering {plant.Id}, {plant.Water}");
@@ -505,7 +563,7 @@ namespace SeleniumTests
         /// <summary>
         /// Closing welcome pop ups 
         /// </summary>
-        public void closeNewsFrames()
+        public void CloseNewsFrames()
         {
             if (driver.FindElement(By.XPath("//*[@id='newszwergLayer']")).GetAttribute("style")
                 .Contains("display: block;"))
@@ -520,6 +578,136 @@ namespace SeleniumTests
                 ClickAtElement(
                     driver.FindElement(By.XPath("//*[@id='dailyloginbonus']/div[2]/div[6]")));
             }
+        }
+
+        /// <summary>
+        /// open Map pop up
+        /// </summary>
+        public void OpenMap()
+        {
+           ClickAtElement( driver.FindElement(By.Id(BaseKey.Bike)));
+           Wait(200);
+        }
+
+        /// <summary>
+        /// Get List of Garden
+        /// </summary>
+        /// <returns>List<Garden></returns>
+        public List<Garden> GetGardens()
+        {
+            List<Garden> result = new List<Garden>();
+
+            driver.SwitchTo().Frame(driver.FindElement(By.Name("multiframe")));
+
+            ReadOnlyCollection<IWebElement> gardens = driver.FindElements(By.ClassName("link"));
+
+            foreach (var garden in gardens)
+            {
+                
+                if (garden.GetAttribute("onclick") != null && garden.GetAttribute("onclick").Contains(BaseKey.GardenSelectMethodOnClick))
+                {
+                    result.Add(new Garden()
+                    {
+                        Id = int.Parse(garden.GetAttribute("onclick").Replace(BaseKey.GardenSelectMethodOnClick, "").Remove(1)),
+                        Name = garden.GetAttribute("onclick"),
+                        IsActive = garden.GetAttribute("onmouseover") == null ? true : false,
+                        WebElement = garden
+                    });
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
+        /// Switch gardens 
+        /// </summary>
+        /// <param name="gardens"></param>
+        /// <param name="number"></param>
+        public void GoToGarden(List<Garden> gardens, int number)
+        {
+            ClickAtElement(gardens.First(x => x.Id == number).WebElement);
+            Wait(500);
+            log.LogWrite(driver.CurrentWindowHandle);
+            driver.SwitchTo().DefaultContent();
+            log.LogWrite(driver.CurrentWindowHandle);
+        }
+
+        /// <summary>
+        /// Gets Information about garden number and Server number 
+        /// </summary>
+        /// <returns></returns>
+        public ServerGardenInfo GetGardenInfo()
+        {
+            ServerGardenInfo serverGardenInfo = new ServerGardenInfo();
+            serverGardenInfo.ServerName =
+                int.Parse(driver.FindElement(By.Id("menuServerInfo")).Text.Replace("Serwer: ", "").Remove(1));
+            serverGardenInfo.GardenNumber =
+                int.Parse(driver.FindElement(By.XPath("//*[@id='menuServerInfo']/span")).Text);
+
+           return serverGardenInfo;
+        }
+
+        /// <summary>
+        /// Method use a Helper Harvest to gather up plant
+        /// </summary>
+        /// <param name="plants"></param>
+        public void GetAllActiveHarvest(List<Grid> plants)
+        {
+            log.LogWrite("Start method : 'GetAllActiveHarvest' ");
+
+            ClickAtElement(driver.FindElement(By.ClassName("harvest")));
+            Wait(3000);
+            try
+            {
+                if (driver.FindElement(By.XPath("//*[@id='baseDialogText']/div")).Text.Contains(BaseKey.NothingToGatherUp))
+                {
+                    ClickAtElement(driver.FindElement(By.XPath("//*[@id='baseDialogButton']")));
+                }
+            }
+            catch (Exception e)
+            {
+                ClickAtElement(driver.FindElement(By.XPath("//*[@id='ernte_log']/img")));
+            }
+            //if (driver.FindElement(By.XPath("//*[@id='baseDialogText']/div")).Text.Contains(BaseKey.NothingToGatherUp))
+            //{
+            //    ClickAtElement(driver.FindElement(By.XPath("//*[@id='baseDialogButton']")));
+            //}
+            //else
+            //{
+            //    ClickAtElement(driver.FindElement(By.XPath("//*[@id='ernte_log']/img")));
+            //}
+            
+            UpdateSowingActive(plants);
+            UpdateGatherUpActive(plants);
+
+            log.LogWrite("End method : 'GetAllActiveHarvest' ");
+        }
+
+        /// <summary>
+        /// Count plants ready to gather
+        /// </summary>
+        /// <param name="plants"></param>
+        /// <returns></returns>
+        public int CountReadyToGather(List<Grid> plants)
+        {
+            log.LogWrite("Start method: 'CountReadyToGather' ");
+            int count = plants.Count(x => x.RedyToGather);
+            log.LogWrite($"Method 'CountReadyToGather' return : {count}");
+            return count;
+        }
+
+        /// <summary>
+        /// Count plants ready to Drop 
+        /// </summary>
+        /// <param name="plants"></param>
+        /// <returns></returns>
+        public int CountReadyToDrop(List<Grid> plants)
+        {
+            log.LogWrite("Start method: 'CountReadyToDrop' ");
+            int count = plants.Count(x => x.ReadyToDrop);
+            log.LogWrite($"Method 'CountReadyToDrop' return : {count}");
+            return count;
         }
     }
 }
